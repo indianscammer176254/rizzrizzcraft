@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>EagleCraft - RizzRizz.sigma</title>
+  <style>
+    body {
+      margin: 0;
+      background: #222;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    #gameContainer {
+      position: relative;
+    }
+    #gameCanvas {
+      background: #87CEEB; /* Sky blue background */
+      display: block;
+      margin: 0 auto;
+      border: 3px solid #fff;
+    }
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: #fff;
+      font-size: 18px;
+      z-index: 100;
+    }
+    #craftMenu {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: #fff;
+      font-size: 16px;
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      border-radius: 5px;
+    }
+    button {
+      margin: 5px 0;
+      padding: 8px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="hud">
+      <div id="resourceDisplay">Common Ore: 0 | Rare Ore: 0</div>
+      <div id="infoDisplay">Drills: 0 | Robots: 0 | Gun: None</div>
+    </div>
+    <div id="craftMenu">
+      <button id="craftGunButton">Craft Gun (5 Common, 2 Rare)</button><br>
+      <button id="craftDrillButton">Craft Drill (3 Common, 1 Rare)</button><br>
+      <button id="craftRobotButton">Craft Robot (10 Common, 5 Rare)</button><br>
+      <button id="fireGunButton" style="display:none;">Fire Gun (Space or Click)</button>
+    </div>
+  </div>
+
+  <script>
+    // Global Resource Variables
+    let commonOre = 0, rareOre = 0;
+    let hasGun = false;
+    let drills = [];   // Each drill boosts resource generation.
+    let robots = [];   // Robots help collect ores automatically.
+    let projectiles = []; // Fired when using the gun
+
+    // Eagle (player) object
+    const eagle = {
+      x: 100,
+      y: 300,
+      width: 60,
+      height: 40,
+      speed: 5
+    };
+
+    // Array for ore items (each ore has a type: common or rare)
+    let ores = [];
+    const oreSize = 20;
+
+    // Keyboard input tracking
+    const keys = {};
+    window.addEventListener('keydown', (e) => {
+      keys[e.code] = true;
+      // Allow shooting if spacebar is pressed and a gun is available
+      if (e.code === 'Space' && hasGun) {
+        shootProjectile();
+      }
+    });
+    window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+    // Function: Spawn ore items every 2 seconds.
+    function spawnOre() {
+      // 80% chance common ore; 20% chance rare ore.
+      let oreType = (Math.random() < 0.8) ? 'common' : 'rare';
+      let ore = {
+        x: 800,
+        y: Math.random() * (600 - oreSize),
+        width: oreSize,
+        height: oreSize,
+        speed: 2 + Math.random() * 2,
+        type: oreType
+      };
+      ores.push(ore);
+    }
+    setInterval(spawnOre, 2000);
+
+    // Collision Helper Function
+    function isColliding(a, b) {
+      return a.x < b.x + b.width &&
+             a.x + a.width > b.x &&
+             a.y < b.y + b.height &&
+             a.y + a.height > b.y;
+    }
+
+    // Gun: Fire a projectile from the eagle's current position.
+    function shootProjectile() {
+      const projectile = {
+        x: eagle.x + eagle.width,
+        y: eagle.y + eagle.height / 2 - 5,
+        width: 10,
+        height: 10,
+        speed: 8
+      };
+      projectiles.push(projectile);
+    }
+
+    // Crafting Buttons Event Listeners
+
+    // Craft Gun: Costs 5 common and 2 rare ore. Only one gun available.
+    document.getElementById('craftGunButton').addEventListener('click', () => {
+      if(commonOre >= 5 && rareOre >= 2 && !hasGun) {
+        commonOre -= 5;
+        rareOre -= 2;
+        hasGun = true;
+        document.getElementById('fireGunButton').style.display = 'inline';
+      } else {
+        alert('Not enough resources or gun already crafted.');
+      }
+    });
+
+    // Craft Drill: Costs 3 common and 1 rare ore.
+    document.getElementById('craftDrillButton').addEventListener('click', () => {
+      if(commonOre >= 3 && rareOre >= 1) {
+        commonOre -= 3;
+        rareOre -= 1;
+        // Position drills at bottom left; each new drill is offset.
+        let drill = {
+          x: 20 + (drills.length * 40),
+          y: 560,
+          size: 30
+        };
+        drills.push(drill);
+      } else {
+        alert('Not enough resources to craft a drill.');
+      }
+    });
+
+    // Craft Robot: Costs 10 common and 5 rare ore.
+    document.getElementById('craftRobotButton').addEventListener('click', () => {
+      if(commonOre >= 10 && rareOre >= 5) {
+        commonOre -= 10;
+        rareOre -= 5;
+        // Spawn the robot near the left side with random vertical placement.
+        let robot = {
+          x: Math.random() * 100,
+          y: Math.random() * (600 - 30),
+          width: 30,
+          height: 30,
+          speed: 1.5
+        };
+        robots.push(robot);
+      } else {
+        alert('Not enough resources to craft a robot.');
+      }
+    });
+
+    // If the user clicks Fire Gun, treat that as pressing space.
+    document.getElementById('fireGunButton').addEventListener('click', () => {
+      if(hasGun) {
+        shootProjectile();
+      }
+    });
+
+    // HUD Update Function.
+    function updateHUD() {
+      document.getElementById('resourceDisplay').innerText =
+        `Common Ore: ${commonOre} | Rare Ore: ${rareOre}`;
+      let gunStatus = hasGun ? "Yes" : "None";
+      document.getElementById('infoDisplay').innerText =
+        `Drills: ${drills.length} | Robots: ${robots.length} | Gun: ${gunStatus}`;
+    }
+
+    // Drills automatically add resources: each drill adds 1 common ore every 3 seconds.
+    setInterval(() => {
+      if(drills.length > 0) {
+        commonOre += drills.length;
+      }
+    }, 3000);
+
+    // Main Game Loop
+    function gameLoop() {
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Update eagle position based on arrow keys.
+      if(keys['ArrowUp'] && eagle.y > 0) eagle.y -= eagle.speed;
+      if(keys['ArrowDown'] && eagle.y + eagle.height < canvas.height)
+        eagle.y += eagle.speed;
+      if(keys['ArrowLeft'] && eagle.x > 0) eagle.x -= eagle.speed;
+      if(keys['ArrowRight'] && eagle.x + eagle.width < canvas.width)
+        eagle.x += eagle.speed;
+      
+      // Clear the canvas.
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw the eagle (as a brown triangle).
+      ctx.fillStyle = 'brown';
+      ctx.beginPath();
+      ctx.moveTo(eagle.x, eagle.y + eagle.height/2);
+      ctx.lineTo(eagle.x + eagle.width, eagle.y);
+      ctx.lineTo(eagle.x + eagle.width, eagle.y + eagle.height);
+      ctx.closePath();
+      ctx.fill();
+
+      // Update and draw ore items.
+      for(let i = 0; i < ores.length; i++) {
+        let ore = ores[i];
+        ore.x -= ore.speed;
+        // Draw ore: common ores are gray, rare ores are purple.
+        ctx.fillStyle = (ore.type === 'common') ? 'gray' : 'purple';
+        ctx.fillRect(ore.x, ore.y, ore.width, ore.height);
+        
+        // When the eagle collects an ore, update resource counts.
+        if(isColliding(eagle, ore)) {
+          if(ore.type === 'common') {
+            commonOre++;
+          } else {
+            rareOre++;
+          }
+          ores.splice(i, 1);
+          i--;
+        }
+      }
+
+      // Update and draw projectiles (if any).
+      for(let i = 0; i < projectiles.length; i++) {
+        let proj = projectiles[i];
+        proj.x += proj.speed;
+        ctx.fillStyle = 'red';
+        ctx.fillRect(proj.x, proj.y, proj.width, proj.height);
+        // Remove projectiles that leave the canvas.
+        if(proj.x > canvas.width) {
+          projectiles.splice(i, 1);
+          i--;
+        }
+      }
+
+      // Draw drills (as dark gray circles with the label "Drill").
+      for(let drill of drills) {
+        ctx.fillStyle = 'darkgray';
+        ctx.beginPath();
+        ctx.arc(drill.x, drill.y, drill.size/2, 0, 2*Math.PI);
+        ctx.fill();
+        ctx.fillStyle = 'black';
+        ctx.font = "12px Arial";
+        ctx.fillText("Drill", drill.x - 15, drill.y + 4);
+      }
+
+      // Update and draw robots, including their automatic ore collection.
+      for(let j = 0; j < robots.length; j++) {
+        let robot = robots[j];
+        // If there are ores available, the robot will target the nearest one.
+        if(ores.length > 0) {
+          let target = null;
+          let minDist = Infinity;
+          for(let ore of ores) {
+            let dx = ore.x - robot.x;
+            let dy = ore.y - robot.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if(dist < minDist) {
+              minDist = dist;
+              target = ore;
+            }
+          }
+          if(target) {
+            let dx = target.x - robot.x;
+            let dy = target.y - robot.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if(dist > 0) {
+              robot.x += (dx / dist) * robot.speed;
+              robot.y += (dy / dist) * robot.speed;
+            }
+            // When a robot touches an ore, it collects that ore.
+            if(isColliding(robot, target)) {
+              if(target.type === 'common') {
+                commonOre++;
+              } else {
+                rareOre++;
+              }
+              let index = ores.indexOf(target);
+              if(index > -1) {
+                ores.splice(index, 1);
+              }
+            }
+          }
+        } else {
+          // If no ores exist, let the robot drift.
+          robot.x += robot.speed;
+          if(robot.x > canvas.width) robot.x = 0;
+        }
+        // Draw robot as a blue square.
+        ctx.fillStyle = 'blue';
+        ctx.fillRect(robot.x, robot.y, robot.width, robot.height);
+      }
+      
+      updateHUD();
+      requestAnimationFrame(gameLoop);
+    }
+    
+    gameLoop();
+  </script>
+</body>
+</html>
