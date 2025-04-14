@@ -55,7 +55,8 @@
       <button id="craftGunButton">Craft Gun (5 Common, 2 Rare)</button><br>
       <button id="craftDrillButton">Craft Drill (3 Common, 1 Rare)</button><br>
       <button id="craftRobotButton">Craft Robot (10 Common, 5 Rare)</button><br>
-      <button id="fireGunButton" style="display:none;">Fire Gun (Space or Click)</button>
+      <button id="fireGunButton" style="display:none;">Fire Gun (Space or Click)</button><br>
+      <button id="goCleverButton">Visit Clever.com</button>
     </div>
   </div>
 
@@ -76,7 +77,7 @@
       speed: 5
     };
 
-    // Array for ore items (each ore has a type: common or rare)
+    // Array for ore items (each ore has a type: 'common' or 'rare')
     let ores = [];
     const oreSize = 20;
 
@@ -177,11 +178,16 @@
       }
     });
 
-    // If the user clicks Fire Gun, treat that as pressing space.
+    // Fire Gun Button (or when spacebar is pressed)
     document.getElementById('fireGunButton').addEventListener('click', () => {
       if(hasGun) {
         shootProjectile();
       }
+    });
+
+    // New: URL call button for Clever.com.
+    document.getElementById('goCleverButton').addEventListener('click', () => {
+      window.open('https://clever.com', '_blank');
     });
 
     // HUD Update Function.
@@ -206,11 +212,11 @@
       const ctx = canvas.getContext('2d');
       
       // Update eagle position based on arrow keys.
-      if(keys['ArrowUp'] && eagle.y > 0) eagle.y -= eagle.speed;
-      if(keys['ArrowDown'] && eagle.y + eagle.height < canvas.height)
+      if (keys['ArrowUp'] && eagle.y > 0) eagle.y -= eagle.speed;
+      if (keys['ArrowDown'] && eagle.y + eagle.height < canvas.height)
         eagle.y += eagle.speed;
-      if(keys['ArrowLeft'] && eagle.x > 0) eagle.x -= eagle.speed;
-      if(keys['ArrowRight'] && eagle.x + eagle.width < canvas.width)
+      if (keys['ArrowLeft'] && eagle.x > 0) eagle.x -= eagle.speed;
+      if (keys['ArrowRight'] && eagle.x + eagle.width < canvas.width)
         eagle.x += eagle.speed;
       
       // Clear the canvas.
@@ -245,20 +251,19 @@
         }
       }
 
-      // Update and draw projectiles (if any).
+      // Update and draw projectiles.
       for(let i = 0; i < projectiles.length; i++) {
         let proj = projectiles[i];
         proj.x += proj.speed;
         ctx.fillStyle = 'red';
         ctx.fillRect(proj.x, proj.y, proj.width, proj.height);
-        // Remove projectiles that leave the canvas.
         if(proj.x > canvas.width) {
           projectiles.splice(i, 1);
           i--;
         }
       }
 
-      // Draw drills (as dark gray circles with the label "Drill").
+      // Draw drills.
       for(let drill of drills) {
         ctx.fillStyle = 'darkgray';
         ctx.beginPath();
@@ -269,14 +274,14 @@
         ctx.fillText("Drill", drill.x - 15, drill.y + 4);
       }
 
-      // Update and draw robots, including their automatic ore collection.
+      // Update and draw robots.
       for(let j = 0; j < robots.length; j++) {
         let robot = robots[j];
-        // If there are ores available, the robot will target the nearest one.
+        // If ores remain, the robot moves toward the closest one.
         if(ores.length > 0) {
           let target = null;
           let minDist = Infinity;
-          for(let ore of ores) {
+          for (let ore of ores) {
             let dx = ore.x - robot.x;
             let dy = ore.y - robot.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
@@ -293,7 +298,7 @@
               robot.x += (dx / dist) * robot.speed;
               robot.y += (dy / dist) * robot.speed;
             }
-            // When a robot touches an ore, it collects that ore.
+            // When a robot "collects" an ore.
             if(isColliding(robot, target)) {
               if(target.type === 'common') {
                 commonOre++;
@@ -307,7 +312,7 @@
             }
           }
         } else {
-          // If no ores exist, let the robot drift.
+          // Otherwise, robot drifts.
           robot.x += robot.speed;
           if(robot.x > canvas.width) robot.x = 0;
         }
